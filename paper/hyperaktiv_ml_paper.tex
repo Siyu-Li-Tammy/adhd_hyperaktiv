@@ -1,0 +1,133 @@
+\documentclass[11pt]{article}
+
+\usepackage[review]{acl}
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+
+\title{HYPERAKTIV-ML: Rethinking ADHD Classification --- A Multimodal Analysis of Cognitive, Behavioral, and Physiological Signals}
+
+\author{Anonymous Submission}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Clinical diagnosis of adult Attention-Deficit/Hyperactivity Disorder (ADHD) relies heavily on subjective symptom reports, motivating interest in objective, machine-learning-assisted assessment from cognitive, physiological, and behavioral signals. We present HYPERAKTIV-ML, a unified pipeline evaluated on the public HYPERAKTIV dataset, which fuses four modalities --- a computerized continuous performance test (CPT-II), wrist actigraphy, heart-rate variability (HRV), and validated self-report questionnaires --- across nine modality combinations. We make three contributions: (1) a systematic incremental analysis showing which modalities add diagnostic value beyond CPT-II alone, with CPT-II plus self-report achieving the strongest binary classification (AUC~=~0.895); (2) a 3-way classification analysis (inattentive-only ADD vs.\ combined ADHD vs.\ non-ADHD) that identifies ADD as a consistent bottleneck across all modalities (recall~$\approx$~39\%); and (3) per-modality unsupervised clustering showing that different modalities capture distinct, only partially overlapping structure, and that cognitive subtypes derived from CPT-II are recovered more reliably than the binary diagnostic label. We further show that physiological modalities fail as standalone classifiers against HYPERAKTIV's psychiatric (rather than healthy) control group, a methodological point with implications for how future ADHD sensing systems should be benchmarked.
+\end{abstract}
+
+\section{Introduction}
+
+Attention-Deficit/Hyperactivity Disorder (ADHD) is a common neurodevelopmental condition, with prevalence estimates around 5--7\% in children and adolescents and 2--5\% in adults \citep{tivadar2025critical}. Clinical diagnosis remains heavily dependent on subjective symptom reports and clinician judgment, methods that are context-sensitive and vulnerable to reporting bias. Objective neuropsychological assessment --- in particular the Conners Continuous Performance Test II (CPT-II) --- offers a task-based measure of sustained attention and inhibitory control, and machine learning applied to CPT-derived and related behavioral features has shown promise for ADHD classification \citep{casals2025machine}.
+
+Despite this, the field has largely defaulted to binary ADHD/non-ADHD classification, obscuring clinically meaningful heterogeneity. Neuropsychological subtyping studies identify multiple distinct cognitive profiles in adult ADHD, including impaired attention/inhibition, elevated delay discounting, and working-memory deficits \citep{mostert2018similar}, suggesting that clustering may better capture clinical reality than a single binary label.
+
+Beyond cognitive testing, wearable-derived actigraphy and heart-rate variability (HRV) have been explored as complementary, lower-burden modalities for ADHD sensing, and self-report questionnaires such as the ASRS and Conners' CAARS carry strong diagnostic signal in isolation --- though a large CAARS-based classifier showed degraded performance when distinguishing ADHD from other psychiatric conditions rather than from healthy controls \citep{christiansen2020machine}, a finding directly relevant to our setting.
+
+A critical and underappreciated challenge is control-group composition. The HYPERAKTIV dataset \citep{hicks2021hyperaktiv} uses \emph{psychiatric} controls --- adults with comorbid mood, anxiety, and substance-use disorders --- rather than healthy volunteers. This design is more clinically realistic but substantially harder for physiological classifiers, since autonomic dysregulation and motor irregularities are shared across these conditions.
+
+We present HYPERAKTIV-ML, a unified multimodal pipeline that integrates CPT-II, HRV, wrist actigraphy, and self-report questionnaires across nine modality combinations. Our contributions are: (1) a systematic incremental analysis establishing which modalities add diagnostic value beyond CPT-II alone; (2) a 3-way classification framework separating ADD, combined ADHD, and non-ADHD that exposes ADD as the bottleneck for all classifiers; and (3) per-modality unsupervised clustering demonstrating that different modalities capture independent biological dimensions, and that cognitive subtype structure is better recovered than binary diagnostic labels across all modalities.
+
+\section{Related Work}
+
+\paragraph{CPT-based classification.} Machine learning applied to CPT-style continuous performance tests has shown strong ADHD classification performance in recent work, including gradient-boosted models applied to smartphone-based CPT sensor data \citep{casals2025machine}. Key predictive features --- omission errors, commission errors, reaction-time variability, and the $d'$ signal-detection index --- closely parallel the manually defined ADHD clinical fingerprint.
+
+\paragraph{Physiological, wearable, and self-report modalities.} The HYPERAKTIV dataset was introduced together with baseline classifiers using actigraphy and HRV features under standard cross-validation \citep{hicks2021hyperaktiv}. Self-report questionnaires, particularly ASRS and Conners' CAARS, carry strong classification signal: a LightGBM model trained on all 26 items of the CAARS short form achieved a global accuracy of 0.80 across a 1{,}629-subject cohort spanning ADHD, obesity, gambling disorder, and healthy controls, though performance degraded when distinguishing ADHD from other psychiatric conditions rather than from healthy controls \citep{christiansen2020machine}. This degradation foreshadows our multimodal fusion results: when controls share symptom profiles or physiology with ADHD patients, self-report retains discriminative edge over physiological modalities, which cannot separate overlapping autonomic profiles. We extend these single-modality findings by systematically quantifying the marginal diagnostic contribution of each modality beyond CPT-II on a dataset with psychiatric (not healthy) controls.
+
+\paragraph{ADHD subtyping and computational heterogeneity.} Neuropsychological subtyping studies identify multiple cognitive profiles in adults with ADHD --- including combined attention/inhibition impairment, elevated delay discounting, and working-memory deficits --- and show that similar subgroups emerge in both ADHD and healthy control populations, challenging purely categorical diagnosis \citep{mostert2018similar}. We build on this by applying unsupervised K-Means and agglomerative clustering directly to CPT-II T-score profiles, evaluating alignment with a three-class ADHD/ADD/non-ADHD diagnostic structure rather than assuming a binary split.
+
+\section{Data and Methods}
+
+\subsection{Dataset}
+
+We use the public HYPERAKTIV dataset \citep{hicks2021hyperaktiv}, comprising 51 adults with a clinical ADHD diagnosis and 52 clinical (psychiatric, non-ADHD) controls with comorbid mood, anxiety, or substance-use disorders. For each participant, the dataset provides: (i) CPT-II raw and normalized (T-score) neuropsychological test outputs; (ii) approximately 6--7 days of wrist-worn actigraphy sampled at 1 sample/minute; (iii) inter-beat-interval (IBI) heart-rate data; and (iv) five validated self-report instruments --- ASRS (6 items), WURS (25 items, retrospective childhood ADHD), MADRS (10 items, depression), HADS-A and HADS-D (7 items each, anxiety and depression). Composite scores per instrument are used rather than item-level features, given the modest sample size ($n=103$).
+
+Not every participant completes every assessment; we therefore define nine overlapping \emph{modality blocks} (CPT-II only, activity only, HRV only, self-report only, and their pairwise/combined unions), each with its own participant count $n$ ranging from 64 (all four modalities) to 97 (CPT-II + self-report). We treat this shrinking-$n$-with-modality-richness trade-off as a first-class limitation rather than a footnote (Section~\ref{sec:limitations}).
+
+\subsection{Feature Engineering}
+
+\paragraph{CPT-II.} Raw scores (omissions, commissions, hit reaction time, hit RT standard error, variability of SE, $d'$, perseverations) are used for classification, since T-scores are already normalized toward the ADHD population and would inflate apparent separation; T-scores are used for clustering, since placing all CPT-II dimensions on a common scale (mean~=~50, SD~=~10) is necessary for Euclidean-distance-based K-Means to treat features equitably.
+
+\paragraph{Actigraphy.} Per-participant summary features are extracted from the raw activity time series, including statistical descriptors of intensity and variability and Welch power spectral density (PSD) features that summarize activity rhythmicity.
+
+\paragraph{HRV.} IBI streams are quality-controlled before feature extraction: runs of three or more consecutive identical IBI values (device fill-in artifacts) are replaced with NaN and excluded, and any IBI deviating more than 20\% from a rolling median (window~=~11 beats) is flagged as a probable extrasystole and excluded, following standard clinical practice for ectopic-beat removal.
+
+\paragraph{Self-report.} Composite (total) scores per instrument are used as features.
+
+\subsection{Classification}
+
+For both binary (ADHD vs.\ non-ADHD) and 3-way (ADHD vs.\ ADD vs.\ non-ADHD) classification, we evaluate Logistic Regression (L2-regularized, $C=0.1$), Random Forest, XGBoost, and LightGBM, together with random/minority/majority dummy baselines, under 10-fold stratified cross-validation to preserve class balance across splits. All continuous features are median-imputed and standardized within a scikit-learn pipeline to avoid leakage across folds. Statistical significance per modality block is assessed with a 500-iteration permutation test on the observed balanced accuracy; with 500 iterations the smallest achievable $p$-value is $1/500 = 0.002$, which we report as $p=0.002$ rather than $p<0.001$.
+
+We report ROC-AUC as the primary threshold-independent ranking metric; balanced accuracy (mean of sensitivity and specificity) as the primary scalar under class imbalance \citep{brodersen2010balanced}; and the Matthews Correlation Coefficient (MCC), which captures all four confusion-matrix cells and is preferred over F1 for binary classification when both classes matter clinically \citep{chicco2020advantages}. Precision, recall, and F1 are reported alongside these. For individual CPT-II features, we compute rank-biserial $r$ (the nonparametric effect size for the Mann-Whitney U test), with $p$-values adjusted using Benjamini-Hochberg FDR correction across the 12-feature multiple-testing scenario ($\alpha=0.05$).
+
+\subsection{Clustering}
+
+We apply K-Means and agglomerative clustering independently within each modality block on standardized (T-score, where applicable) features, selecting $k$ via silhouette score and the elbow method. We evaluate cluster quality both geometrically (silhouette score, Davies-Bouldin index) and against two external references: the binary ADHD diagnosis label, and a three-class cognitive-subtype reference derived from CPT-II clustering itself, using the Adjusted Rand Index (ARI) and a $\chi^2$ test of association. Cluster-quality permutation tests (500 iterations, silhouette score) assess whether observed cluster geometry exceeds chance.
+
+\section{Results}
+
+\subsection{Binary Classification}
+
+CPT-II combined with self-report achieves the best binary classification performance (AUC~=~0.895, balanced accuracy~=~81.6\%, F1~=~0.813, MCC~=~0.632, permutation $p=0.002$, $n=97$), a +9.4 AUC-point gain over CPT-II alone (AUC~=~0.800). All CPT-II-containing modality blocks reach statistical significance ($p\le0.044$; Table~\ref{tab:binary}). HRV alone (AUC~=~0.378, $p=0.798$) and actigraphy alone (AUC~=~0.528, $p=0.611$) both fail to exceed chance. The all-modality fusion block reaches AUC~=~0.750 but at reduced $n=64$ and only marginal significance after accounting for the nine tests performed (Section~\ref{sec:limitations}).
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lrrl}
+\toprule
+\textbf{Modality block} & $n$ & \textbf{AUC} & \textbf{perm.\ $p$} \\
+\midrule
+CPT + Self-report      & 97 & 0.895 & 0.002 \\
+Self-report only       & 94 & 0.851 & 0.002 \\
+CPT only               & 97 & 0.800 & 0.002 \\
+CPT + HRV              & 75 & 0.785 & 0.002 \\
+All modalities         & 64 & 0.750 & 0.006 \\
+CPT + Activity         & 79 & 0.706 & 0.002 \\
+CPT + Act.\ + HRV      & 64 & 0.671 & 0.044 \\
+Activity only          & 85 & 0.528 & 0.611 \\
+HRV only               & 80 & 0.378 & 0.798 \\
+\bottomrule
+\end{tabular}
+\caption{Binary classification (best model per modality block), ranked by AUC. Permutation $p$-values are from 500-iteration tests on balanced accuracy.}
+\label{tab:binary}
+\end{table}
+
+\subsection{CPT-II Exploratory Analysis}
+
+Five CPT-II features survive Benjamini-Hochberg FDR correction ($\alpha=0.05$) with medium-to-large rank-biserial effect sizes: omission errors ($r=0.42$, $p_{\text{fdr}}=0.003$), commission errors ($r=0.51$, $p_{\text{fdr}}<0.001$), hit-RT standard error ($r=0.45$, $p_{\text{fdr}}=0.002$), variability of SE ($r=0.51$, $p_{\text{fdr}}<0.001$), $d'$ ($r=-0.43$, $p_{\text{fdr}}=0.002$), and perseverations ($r=0.41$, $p_{\text{fdr}}=0.005$). The expected directional pattern --- higher omissions (inattention) and commissions (impulsivity) in ADHD --- is confirmed, though raw reaction time itself does not survive correction, consistent with an adult sample skewed toward inattentive rather than hyperactive presentation. Despite this statistical separation, CPT-II distributions overlap substantially between groups on every feature, motivating fusion with complementary modalities.
+
+\subsection{3-Way Classification}
+
+Self-report alone achieves the best 3-way performance (macro-F1~=~0.632, macro-AUC~=~0.804, balanced accuracy~=~64.4\%, permutation $p=0.003$). ADD recall is the consistent bottleneck: the best model reaches ADHD recall~=~0.800 and non-ADHD recall~=~0.739, but ADD recall of only 0.391. The gap between macro-AUC and macro-F1 across all modalities indicates that models can rank patients along a severity axis (captured by AUC) but struggle to place clean categorical boundaries around the ADD group (penalized by F1).
+
+\subsection{Clustering}
+
+CPT-II K-Means ($k=4$, silhouette~=~0.236, Davies-Bouldin~=~1.367) identifies a cognitive-severity gradient: a low-impairment cluster (40\% ADHD, moderate errors), an intermediate combined profile (71\% ADHD, elevated commission and omission errors), and two ADD-like clusters (high omissions, low commissions). HRV achieves the highest silhouette score (0.309, $k=3$) but near-zero ARI against clinical labels ($\text{ARI}=-0.008$), indicating geometrically clean but clinically uninformative clusters. CPT-II + self-report fusion achieves the best cross-modal subtype recovery (ARI vs.\ CPT-derived subtypes~=~0.198, $k=4$). Across all modalities, ARI against CPT-derived subtypes exceeds ARI against the binary ADHD label, supporting unsupervised clustering as a cognitive phenotyping tool rather than a diagnostic proxy.
+
+\section{Discussion}
+
+\paragraph{Self-report as the key complementary modality.} The +9.4 AUC-point gain from adding self-report to CPT-II reflects non-redundant signal: CPT-II captures objective cognitive-performance deficits, while ASRS, WURS, MADRS, and HADS capture subjective symptom burden, childhood history, and mood/anxiety comorbidity. Because the psychiatric control group is behaviorally distinct from ADHD on self-report but not on physiological measures, self-report provides discriminative lift where HRV and actigraphy do not.
+
+\paragraph{Physiological modalities and the psychiatric-control problem.} The failure of HRV and actigraphy as standalone classifiers is not simply a data-quality issue --- both show reasonably well-structured clusters geometrically (silhouette~$>0.13$) --- but rather a signal-contamination issue. Autonomic dysregulation is a shared feature of ADHD, anxiety, and mood disorders, and motor irregularity is common across psychiatric conditions. This suggests that physiological ADHD classifiers benchmarked against \emph{healthy} controls will systematically overstate real-world clinical utility, and that control-group composition should be treated as an explicit experimental-design variable in future ADHD sensing work.
+
+\paragraph{ADD as the classification bottleneck.} ADD recall lags 30--40 percentage points behind ADHD and non-ADHD recall across all modalities. We interpret this as a signal problem rather than a model failure: ADD presents on a continuum with both ADHD (shared inattention) and non-ADHD (absent impulsivity), without a boundary that is clean in any single modality space. The high macro-AUC relative to macro-F1 confirms that models rank ADD patients correctly on average but cannot place a discrete decision boundary around them.
+
+\paragraph{Clustering captures subtype structure, not diagnostic labels.} The consistent pattern that all modalities show higher ARI against CPT-derived subtypes than against the binary ADHD label suggests that unsupervised clustering recovers finer cognitive structure than the binary label captures. HRV's dissociation between high silhouette score and near-zero ARI is particularly instructive: it captures a real physiological grouping, but one that tracks something orthogonal to ADHD diagnosis --- plausibly circadian or arousal-regulation differences shared across psychiatric groups rather than an ADHD-specific signal.
+
+\section{Limitations}
+\label{sec:limitations}
+
+Our sample is small (total $n=103$; as low as $n=64$ for the all-modality overlap), typical of clinical ADHD datasets but limiting statistical power and generalizability; results should be read as hypothesis-generating rather than clinically deployable. We test nine overlapping modality blocks against a nominal $\alpha=0.05$; the all-modality and CPT+Activity+HRV blocks are only marginally significant ($p=0.044$--$0.006$) and would not survive a strict Bonferroni correction across all nine tests. We do not have an external, independently collected validation cohort, so all reported metrics are cross-validated on a single dataset and may not transfer to other CPT-II implementations, actigraphy devices, or populations. HYPERAKTIV's psychiatric control group is a methodological strength for realism but means our physiological-modality results cannot be directly compared to studies using healthy controls. Finally, our feature engineering choices (e.g., composite rather than item-level self-report scores, specific HRV artifact-rejection thresholds) were made to control overfitting at this sample size but were not exhaustively benchmarked against alternatives.
+
+\section*{Ethical Considerations}
+
+HYPERAKTIV is a publicly released, de-identified dataset (CC BY-NC 4.0) collected with the original authors' institutional approvals; this work is a secondary analysis and involved no new human-subjects data collection. We caution against interpreting any classifier in this paper as diagnostic: given the modest sample size, marginal significance for several modality blocks, and absence of external validation, these models are research tools for understanding modality contribution and subtype structure, not screening or diagnostic instruments. We also note a fairness consideration specific to this dataset: HYPERAKTIV's control group has its own psychiatric diagnoses, which is a deliberate and valuable design choice for clinical realism, but means findings here should not be extrapolated to distinguishing ADHD from the general (non-clinical) population without further validation.
+
+\bibliography{references}
+
+\end{document}
