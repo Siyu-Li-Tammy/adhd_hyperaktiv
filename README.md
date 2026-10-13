@@ -45,12 +45,12 @@ All values below are taken from the paper. Please read them as exploratory (smal
 | 0 | Install dependencies, fix random seeds (`SEED = 42`) | |
 | 1 | Load and clean CPT-II, actigraphy, HRV, self-report, and patient-info tables; build per-modality participant sets | Tables 1, 7 |
 | 2 | Binary classification across 9 modality combinations (LR / RF / XGBoost / LightGBM, 10-fold stratified CV, majority baselines, 500-iteration permutation tests) | Tables 2, 3, 11 |
-| 2b | Common complete-case robustness analysis (n = 64, 5×5 repeated nested CV, paired AUC differences) | Tables 4, 8, 9, 10 — [notebook section / script] |
+| 2b | Common complete-case robustness analysis (n = 64, 5×5 repeated nested CV, paired AUC differences) | Tables 4, 8, 9, 10 |
 | 3 | Three-way classification with per-class analysis | Tables 5, 12, 13 |
 | 4 | Per-modality K-Means clustering, k selection, ARI and chi-square against clinical labels | Tables 6, 15–18, Fig. 1 |
 | 5–7 | Figures, cross-modality agreement, optional PDF export | |
 
-CPT-II feature-level tests (Table 14) are in [notebook section / script].
+CPT-II feature-level tests (Table 14).
 
 ## Setup
 
@@ -58,8 +58,6 @@ CPT-II feature-level tests (Table 14) are in [notebook section / script].
 python -m venv .venv && source .venv/bin/activate   # or conda/uv
 pip install -r requirements.txt
 ```
-
-Last end-to-end run: [DATE], Python [VERSION].
 
 ### Data
 
@@ -102,9 +100,10 @@ If you use this code, please cite the paper and the dataset:
 @inproceedings{li2026beyond,
   title     = {Beyond Binary {ADHD} Classification: Multimodal Phenotyping in a Clinical Psychiatric Cohort},
   author    = {Li, Siyu and Perkoff, E. Margaret and Ungar, Lyle},
-  booktitle = {[BOOKTITLE]},
+  booktitle = {Proceedings of the First Workshop on Multimodal, Multilingual, and Multicultural Mental Health and Psychotherapy ({MultiPsyche} 2026)},
   year      = {2026},
-  url       = {[PAPER_URL]}
+  publisher = {Association for Computational Linguistics},
+  url       = {https://openreview.net/forum?id=8gvzO3G5Hm}
 }
 
 @inproceedings{Hicks2021,
