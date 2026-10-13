@@ -4,7 +4,7 @@
 
 Siyu Li, E. Margaret Perkoff, Lyle Ungar (University of Pennsylvania)
 
-Code for the paper published at **[MultiPsyche, 2026]** ([paper link](https://openreview.net/forum?id=8gvzO3G5Hm&noteId=8gvzO3G5Hm)).
+Code for the paper published at **[MultiPsyche, 2026]** [paper link](https://openreview.net/pdf?id=8gvzO3G5Hm).
 
 The pipeline evaluates four measurement modalities on the public [HYPERAKTIV dataset](https://datasets.simula.no/hyperaktiv/) (Hicks et al., 2021), which contains 51 adults with ADHD and 52 psychiatric (not healthy) controls:
 
